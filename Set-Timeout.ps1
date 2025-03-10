@@ -36,6 +36,14 @@
     Date: 2025-03-10
 #>
 
+function Write-Log {
+    param([string]$Message)
+    $logFile = Join-Path -Path $env:TEMP -ChildPath "Set-TimeOut.log"
+    $timeStamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+    $entry = "$timeStamp - $Message"
+    Add-Content -Path $logFile -Value $entry
+}
+
 function Set-TimeOut {
     [CmdletBinding()]
     param(
@@ -56,28 +64,36 @@ function Set-TimeOut {
         return
     }
 
-    $logFile = Join-Path -Path $env:TEMP -ChildPath "Set-TimeOut.log"
-    $timeStamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
-
-    function Write-Log {
-        param([string]$Message)
-        $entry = "$timeStamp - $Message"
-        Add-Content -Path $logFile -Value $entry
-    }
-
-    $timeouts = @(
+    $acTimeouts = @(
         "monitor-timeout-ac",
-        "monitor-timeout-dc",
         "disk-timeout-ac",
-        "disk-timeout-dc",
         "standby-timeout-ac",
+        "hibernate-timeout-ac"
+    )
+
+    $dcTimeouts = @(
+        "monitor-timeout-dc",
+        "disk-timeout-dc",
         "standby-timeout-dc",
-        "hibernate-timeout-ac",
         "hibernate-timeout-dc"
     )
 
-    foreach ($timeout in $timeouts) {
-        if (($timeout -like "*-ac" -and $AC) -or ($timeout -like "*-dc" -and $DC)) {
+    if ($AC) {
+        foreach ($timeout in $acTimeouts) {
+            try {
+                $command = "powercfg /change $timeout $Timeout"
+                Invoke-Expression $command
+                Write-Log "Success: Set $timeout to $Timeout minutes."
+            }
+            catch {
+                Write-Log "Error setting $timeout`: $_"
+                Write-Error "Error setting $timeout`: $_"
+            }
+        }
+    }
+
+    if ($DC) {
+        foreach ($timeout in $dcTimeouts) {
             try {
                 $command = "powercfg /change $timeout $Timeout"
                 Invoke-Expression $command
