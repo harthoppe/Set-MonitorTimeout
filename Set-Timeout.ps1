@@ -36,13 +36,23 @@
     Date: 2025-03-10
 #>
 
+$logFile = Join-Path -Path $env:TEMP -ChildPath "Set-TimeOut.log"
+
 function Write-Log {
     param([string]$Message)
-    $logFile = Join-Path -Path $env:TEMP -ChildPath "Set-TimeOut.log"
     $timeStamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
     $entry = "$timeStamp - $Message"
     Add-Content -Path $logFile -Value $entry
     Write-Output $Message
+}
+
+function Handle-MissingSwitchError {
+    $logFile = Join-Path -Path $env:TEMP -ChildPath "Set-TimeOut.log"
+    $timeStamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+    $errorMessage = "You must specify at least one switch: -AC, -DC, or both."
+    $entry = "$timeStamp - $errorMessage"
+    Add-Content -Path $logFile -Value $entry
+    Write-Error $errorMessage
 }
 
 function Set-TimeOut {
@@ -52,16 +62,11 @@ function Set-TimeOut {
         [switch]$DC,
         [Parameter()]
         [ValidateRange(0,1440)]
-        [int]$Timeout = 0
+        [int]$Timeout = 0  # Default value is 0, which disables all timeouts
     )
 
     if (-not ($AC -or $DC)) {
-        $logFile = Join-Path -Path $env:TEMP -ChildPath "Set-TimeOut.log"
-        $timeStamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
-        $errorMessage = "You must specify at least one switch: -AC, -DC, or both."
-        $entry = "$timeStamp - $errorMessage"
-        Add-Content -Path $logFile -Value $entry
-        Write-Error $errorMessage
+        Handle-MissingSwitchError
         return
     }
 
@@ -78,8 +83,7 @@ function Set-TimeOut {
         "standby-timeout-dc",
         "hibernate-timeout-dc"
     )
-
-    if ($AC) {
+                Start-Process -FilePath "powercfg" -ArgumentList "/change", $timeout, $Timeout -NoNewWindow -Wait
         foreach ($timeout in $acTimeouts) {
             try {
                 $command = "powercfg /change $timeout $Timeout"
@@ -88,8 +92,8 @@ function Set-TimeOut {
             }
             catch {
                 Write-Log "Error setting $timeout`: $_"
-                Write-Error "Error setting $timeout`: $_"
-            }
+                Write-Log "Error setting $timeout to $Timeout minutes: $_"
+                Write-Error "Error setting $timeout to $Timeout minutes: $_"
         }
     }
 
