@@ -4,7 +4,6 @@
 
 .DESCRIPTION
     This script allows you to set the monitor, disk, standby, and hibernate timeouts for AC and/or DC power modes using the powercfg command.
-    It logs the actions and any errors to a log file in the TEMP directory.
 
 .PARAMETER AC
     Switch to set the timeouts for AC power mode.
@@ -36,24 +35,6 @@
     Date: 2025-03-10
 #>
 
-$logFile = Join-Path -Path $env:TEMP -ChildPath "Set-TimeOut.log"
-
-function Write-Log {
-    param([string]$Message)
-    $timeStamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
-    $entry = "$timeStamp - $Message"
-    Add-Content -Path $logFile -Value $entry
-    Write-Output $Message
-}
-
-function Handle-MissingSwitchError {
-    $timeStamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
-    $errorMessage = "You must specify at least one switch: -AC, -DC, or both."
-    $entry = "$timeStamp - $errorMessage"
-    Add-Content -Path $logFile -Value $entry
-    Write-Error $errorMessage
-}
-
 function Set-TimeOut {
     [CmdletBinding()]
     param(
@@ -65,7 +46,6 @@ function Set-TimeOut {
     )
 
     if (-not ($AC -or $DC)) {
-        Handle-MissingSwitchError
         return
     }
 
@@ -85,29 +65,15 @@ function Set-TimeOut {
 
     if ($AC) {
         foreach ($timeout in $acTimeouts) {
-            try {
-                $command = "powercfg /change $timeout $Timeout"
-                Invoke-Expression $command
-                Write-Log "Success: Set $timeout to $Timeout minutes."
-            }
-            catch {
-                Write-Log "Error setting $timeout: $_"
-                Write-Error "Error setting $timeout to $Timeout minutes: $_"
-            }
+            $command = "powercfg /change $timeout $Timeout"
+            Invoke-Expression $command
         }
     }
 
     if ($DC) {
         foreach ($timeout in $dcTimeouts) {
-            try {
-                $command = "powercfg /change $timeout $Timeout"
-                Invoke-Expression $command
-                Write-Log "Success: Set $timeout to $Timeout minutes."
-            }
-            catch {
-                Write-Log "Error setting $timeout: $_"
-                Write-Error "Error setting $timeout to $Timeout minutes: $_"
-            }
+            $command = "powercfg /change $timeout $Timeout"
+            Invoke-Expression $command
         }
     }
 }
