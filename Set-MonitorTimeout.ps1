@@ -65,27 +65,21 @@ function Set-MonitorTimeout {
         [bool]$ApplyAC,
         [bool]$ApplyDC
     )
+    $timeoutMessage = if ($Minutes -eq 0) { "indefinitely" } else { "$Minutes minute(s)" }
     if ($ApplyAC) {
-        Write-Output "Setting monitor timeout to $Minutes minute(s) on AC power..."
+        Write-Output "Setting monitor timeout to $timeoutMessage on AC power..."
         powercfg /change monitor-timeout-ac $Minutes | Out-Null
         if ($LASTEXITCODE -ne 0) {
             Write-Error "Failed to set monitor timeout for AC power. Exit code: $LASTEXITCODE"
         }
-        if ($LASTEXITCODE -ne 0) {
-            Write-Error "Failed to set monitor timeout for AC power."
-        }
+    }
+    if ($ApplyDC) {
+        Write-Output "Setting monitor timeout to $timeoutMessage on DC (battery) power..."
         powercfg /change monitor-timeout-dc $Minutes | Out-Null
         if ($LASTEXITCODE -ne 0) {
             Write-Error "Failed to set monitor timeout for DC power. Exit code: $LASTEXITCODE"
         }
-    if ($ApplyDC) {
-        Write-Output "Setting monitor timeout to $Minutes minute(s) on DC (battery) power..."
-        powercfg /change monitor-timeout-dc $Minutes | Out-Null
-        if ($LASTEXITCODE -ne 0) {
-            Write-Error "Failed to set monitor timeout for DC power."
-        }
     }
-}
 }
 
 try {
@@ -95,7 +89,15 @@ try {
         Write-Warning "Running without administrative privileges. Some settings may not be applied correctly."
     }
 
+    # Define registry path for screensaver settings
+    $regPath = "HKCU:\Control Panel\Desktop"
+
     # Configure monitor timeout for selected power options
+    Set-MonitorTimeout -Minutes $Duration -ApplyAC $AC -ApplyDC $DC
+
+    # Optionally disable the screensaver inline
+    if ($DisableScreensaver) {
+        Write-Output "Disabling screensaver..."
         try {
             Set-ItemProperty -Path $regPath -Name ScreenSaveActive -Value "0"
             Write-Output "Screensaver has been disabled."
@@ -103,12 +105,6 @@ try {
         catch {
             Write-Error "Failed to disable screensaver: $_"
         }
-    # Optionally disable the screensaver inline
-    if ($DisableScreensaver) {
-        Write-Output "Disabling screensaver..."
-        $regPath = "HKCU:\Control Panel\Desktop"
-        Set-ItemProperty -Path $regPath -Name ScreenSaveActive -Value "0"
-        Write-Output "Screensaver has been disabled."
     }
 
     Write-Output "Configuration complete."
