@@ -27,6 +27,10 @@
     Set-TimeOut -AC -DC -Timeout 15
     Sets the timeouts for both AC and DC power modes to 15 minutes.
 
+.EXAMPLE
+    Set-TimeOut -AC -DC -Timeout 0
+    Disables all timeouts for both AC and DC power modes.
+
 .NOTES
     Author: Hart Hoppe
     Date: 2025-03-10
@@ -80,8 +84,8 @@ function Set-TimeOut {
                 Write-Log "Success: Set $timeout to $Timeout minutes."
             }
             catch {
-                Write-Log "Error setting $timeout: $_"
-                Write-Error "Error setting $timeout: $_"
+                Write-Log "Error setting $timeout`: $_"
+                Write-Error "Error setting $timeout`: $_"
             }
         }
     }
