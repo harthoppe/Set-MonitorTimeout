@@ -82,28 +82,20 @@ function Set-TimeOut {
         "standby-timeout-dc",
         "hibernate-timeout-dc"
     )
-        if ($AC) {
-            foreach ($timeout in $acTimeouts) {
-                try {
-                    $command = "powercfg /change $timeout $Timeout"
-                    Invoke-Expression $command
-                    Write-Log "Success: Set $timeout to $Timeout minutes."
-                }
-                catch {
-                    Write-Log "Error setting $timeout`: $_"
-                    Write-Error "Error setting $timeout to $Timeout minutes: $_"
-                }
-            }
-        }
+
+    if ($AC) {
+        foreach ($timeout in $acTimeouts) {
             try {
                 $command = "powercfg /change $timeout $Timeout"
                 Invoke-Expression $command
                 Write-Log "Success: Set $timeout to $Timeout minutes."
             }
             catch {
-                Write-Log "Error setting $timeout to $Timeout minutes: $_"
+                Write-Log "Error setting $timeout: $_"
                 Write-Error "Error setting $timeout to $Timeout minutes: $_"
+            }
         }
+    }
 
     if ($DC) {
         foreach ($timeout in $dcTimeouts) {
@@ -113,8 +105,8 @@ function Set-TimeOut {
                 Write-Log "Success: Set $timeout to $Timeout minutes."
             }
             catch {
-                Write-Log "Error setting $timeout`: $_"
-                Write-Error "Error setting $timeout`: $_"
+                Write-Log "Error setting $timeout: $_"
+                Write-Error "Error setting $timeout to $Timeout minutes: $_"
             }
         }
     }
