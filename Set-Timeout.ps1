@@ -12,23 +12,23 @@
 .PARAMETER DC
     Switch to set the timeouts for DC power mode.
 
-.PARAMETER Timeout
+.PARAMETER Duration
     The timeout value in minutes. Must be between 0 and 1440.
 
 .EXAMPLE
-    Set-TimeOut -AC -Timeout 10
+    Set-TimeOut -AC -Duration 10
     Sets the timeouts for AC power mode to 10 minutes.
 
 .EXAMPLE
-    Set-TimeOut -DC -Timeout 20
+    Set-TimeOut -DC -Duration 20
     Sets the timeouts for DC power mode to 20 minutes.
 
 .EXAMPLE
-    Set-TimeOut -AC -DC -Timeout 15
+    Set-TimeOut -AC -DC -Duration 15
     Sets the timeouts for both AC and DC power modes to 15 minutes.
 
 .EXAMPLE
-    Set-TimeOut -AC -DC -Timeout 0
+    Set-TimeOut -AC -DC -Duration 0
     Disables all timeouts for both AC and DC power modes.
 
 .NOTES
@@ -58,7 +58,7 @@ function Set-TimeOut {
         [switch]$DC,
         [Parameter()]
         [ValidateRange(0,1440)]
-        [int]$Timeout = 0  # Default value is 0, which disables all timeouts
+        [int]$Duration = 0  # Default value is 0, which disables all timeouts
     )
 
     if (-not ($AC -or $DC)) {
@@ -83,12 +83,12 @@ function Set-TimeOut {
     if ($AC) {
         foreach ($timeout in $acTimeouts) {
             try {
-                $command = "powercfg /change $timeout $Timeout"
+                $command = "powercfg /change $timeout $Duration"
                 Invoke-Expression $command
-                Write-Log "Success: Set $timeout to $Timeout minutes."
+                Write-Log "Success: Set $timeout to $Duration minutes."
             }
             catch {
-                Write-Log "Error setting $timeout to $Timeout minutes: $_"
+                Write-Log "Error setting $timeout to $Duration minutes: $_"
             }
         }
     }
@@ -96,13 +96,20 @@ function Set-TimeOut {
     if ($DC) {
         foreach ($timeout in $dcTimeouts) {
             try {
-                $command = "powercfg /change $timeout $Timeout"
+                $command = "powercfg /change $timeout $Duration"
                 Invoke-Expression $command
-                Write-Log "Success: Set $timeout to $Timeout minutes."
+                Write-Log "Success: Set $timeout to $Duration minutes."
             }
             catch {
-                Write-Log "Error setting $timeout to $Timeout minutes: $_"
+                Write-Log "Error setting $timeout to $Duration minutes: $_"
             }
         }
     }
 }
+
+# # UNCOMMENT TO USE AS A MODULE
+# # Export the Set-TimeOut function
+# Export-ModuleMember -Function Set-TimeOut
+
+# Call the Set-TimeOut function with the specified parameters
+Set-TimeOut -AC -DC -Duration 0
