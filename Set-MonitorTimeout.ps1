@@ -22,12 +22,16 @@
     A switch that, when present, disables the screensaver.
 
 .EXAMPLE
-    .\ConfigureDisplayTimeout.ps1 -AC
+    .\Set-MonitorTimeout.ps1 -AC
     Sets monitor timeout to never (indefinite) for AC power only.
 
 .EXAMPLE
-    .\ConfigureDisplayTimeout.ps1 -DC -Duration 20 -DisableScreensaver
+    .\Set-MonitorTimeout.ps1 -DC -Duration 20 -DisableScreensaver
     Sets monitor timeout to 20 minutes for DC (battery) power and disables the screensaver.
+
+.EXAMPLE
+    .\Set-MonitorTimeout.ps1 -AC -DC -DisableScreensaver
+    Sets monitor timeout to never (indefinite) for both AC and DC power and disables the screensaver.
 
 .NOTES
     Running the script with administrative privileges is recommended for full effect.
@@ -52,7 +56,7 @@ param (
 # Ensure at least one power option is specified.
 if (-not ($AC -or $DC)) {
     Write-Error "You must specify at least one power option: -AC, -DC, or both."
-    exit 1
+    throw "You must specify at least one power option: -AC, -DC, or both."
 }
 
 function Set-MonitorTimeout {
@@ -64,11 +68,24 @@ function Set-MonitorTimeout {
     if ($ApplyAC) {
         Write-Output "Setting monitor timeout to $Minutes minute(s) on AC power..."
         powercfg /change monitor-timeout-ac $Minutes | Out-Null
-    }
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Failed to set monitor timeout for AC power. Exit code: $LASTEXITCODE"
+        }
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Failed to set monitor timeout for AC power."
+        }
+        powercfg /change monitor-timeout-dc $Minutes | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Failed to set monitor timeout for DC power. Exit code: $LASTEXITCODE"
+        }
     if ($ApplyDC) {
         Write-Output "Setting monitor timeout to $Minutes minute(s) on DC (battery) power..."
         powercfg /change monitor-timeout-dc $Minutes | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Failed to set monitor timeout for DC power."
+        }
     }
+}
 }
 
 try {
@@ -79,8 +96,13 @@ try {
     }
 
     # Configure monitor timeout for selected power options
-    Set-MonitorTimeout -Minutes $Duration -ApplyAC:$AC -ApplyDC:$DC
-
+        try {
+            Set-ItemProperty -Path $regPath -Name ScreenSaveActive -Value "0"
+            Write-Output "Screensaver has been disabled."
+        }
+        catch {
+            Write-Error "Failed to disable screensaver: $_"
+        }
     # Optionally disable the screensaver inline
     if ($DisableScreensaver) {
         Write-Output "Disabling screensaver..."
