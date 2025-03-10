@@ -53,10 +53,25 @@ param (
     [switch]$DisableScreensaver
 )
 
+# Define log file path
+$logFile = Join-Path -Path $env:TEMP -ChildPath "Set-MonitorTimeout.log"
+
+function Log-Output {
+    param (
+        [string]$Message
+    )
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $logMessage = "$timestamp - $Message"
+    Write-Output $logMessage
+    Add-Content -Path $logFile -Value $logMessage
+}
+
 # Ensure at least one power option is specified.
 if (-not ($AC -or $DC)) {
-    Write-Error "You must specify at least one power option: -AC, -DC, or both."
-    throw "You must specify at least one power option: -AC, -DC, or both."
+    $errorMessage = "You must specify at least one power option: -AC, -DC, or both."
+    Log-Output $errorMessage
+    Write-Error $errorMessage
+    throw $errorMessage
 }
 
 function Set-MonitorTimeout {
@@ -67,17 +82,17 @@ function Set-MonitorTimeout {
     )
     $timeoutMessage = if ($Minutes -eq 0) { "indefinitely" } else { "$Minutes minute(s)" }
     if ($ApplyAC) {
-        Write-Output "Setting monitor timeout to $timeoutMessage on AC power..."
+        Log-Output "Setting monitor timeout to $timeoutMessage on AC power..."
         powercfg /change monitor-timeout-ac $Minutes | Out-Null
         if ($LASTEXITCODE -ne 0) {
-            Write-Error "Failed to set monitor timeout for AC power. Exit code: $LASTEXITCODE"
+            Log-Output "Failed to set monitor timeout for AC power. Exit code: $LASTEXITCODE"
         }
     }
     if ($ApplyDC) {
-        Write-Output "Setting monitor timeout to $timeoutMessage on DC (battery) power..."
+        Log-Output "Setting monitor timeout to $timeoutMessage on DC (battery) power..."
         powercfg /change monitor-timeout-dc $Minutes | Out-Null
         if ($LASTEXITCODE -ne 0) {
-            Write-Error "Failed to set monitor timeout for DC power. Exit code: $LASTEXITCODE"
+            Log-Output "Failed to set monitor timeout for DC power. Exit code: $LASTEXITCODE"
         }
     }
 }
@@ -86,7 +101,7 @@ try {
     # Check for administrative privileges
     $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltinRole] "Administrator")
     if (-not $isAdmin) {
-        Write-Warning "Running without administrative privileges. Some settings may not be applied correctly."
+        Log-Output "Running without administrative privileges. Some settings may not be applied correctly."
     }
 
     # Define registry path for screensaver settings
@@ -97,18 +112,18 @@ try {
 
     # Optionally disable the screensaver inline
     if ($DisableScreensaver) {
-        Write-Output "Disabling screensaver..."
+        Log-Output "Disabling screensaver..."
         try {
             Set-ItemProperty -Path $regPath -Name ScreenSaveActive -Value "0"
-            Write-Output "Screensaver has been disabled."
+            Log-Output "Screensaver has been disabled."
         }
         catch {
-            Write-Error "Failed to disable screensaver: $_"
+            Log-Output "Failed to disable screensaver: $_"
         }
     }
 
-    Write-Output "Configuration complete."
+    Log-Output "Configuration complete."
 }
 catch {
-    Write-Error "An error occurred: $_"
+    Log-Output "An error occurred: $_"
 }
