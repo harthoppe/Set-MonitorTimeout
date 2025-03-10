@@ -47,7 +47,6 @@ function Write-Log {
 }
 
 function Handle-MissingSwitchError {
-    $logFile = Join-Path -Path $env:TEMP -ChildPath "Set-TimeOut.log"
     $timeStamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
     $errorMessage = "You must specify at least one switch: -AC, -DC, or both."
     $entry = "$timeStamp - $errorMessage"
@@ -83,19 +82,28 @@ function Set-TimeOut {
         "standby-timeout-dc",
         "hibernate-timeout-dc"
     )
-                Start-Process -FilePath "powercfg" -ArgumentList "/change", $timeout, $Timeout -NoNewWindow -Wait
-        foreach ($timeout in $acTimeouts) {
+        if ($AC) {
+            foreach ($timeout in $acTimeouts) {
+                try {
+                    $command = "powercfg /change $timeout $Timeout"
+                    Invoke-Expression $command
+                    Write-Log "Success: Set $timeout to $Timeout minutes."
+                }
+                catch {
+                    Write-Log "Error setting $timeout`: $_"
+                    Write-Error "Error setting $timeout to $Timeout minutes: $_"
+                }
+            }
+        }
             try {
                 $command = "powercfg /change $timeout $Timeout"
                 Invoke-Expression $command
                 Write-Log "Success: Set $timeout to $Timeout minutes."
             }
             catch {
-                Write-Log "Error setting $timeout`: $_"
                 Write-Log "Error setting $timeout to $Timeout minutes: $_"
                 Write-Error "Error setting $timeout to $Timeout minutes: $_"
         }
-    }
 
     if ($DC) {
         foreach ($timeout in $dcTimeouts) {
