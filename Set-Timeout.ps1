@@ -42,6 +42,7 @@ function Write-Log {
     $timeStamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
     $entry = "$timeStamp - $Message"
     Add-Content -Path $logFile -Value $entry
+    Write-Output $Message
 }
 
 function Set-TimeOut {
