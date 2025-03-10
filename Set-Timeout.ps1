@@ -1,31 +1,31 @@
 <#
 .SYNOPSIS
-    Sets the monitor timeout for AC and/or DC power modes.
+    Sets the monitor, disk, standby, and hibernate timeouts for AC and/or DC power modes.
 
 .DESCRIPTION
-    This script allows you to set the monitor timeout for AC and/or DC power modes using the powercfg command.
+    This script allows you to set the monitor, disk, standby, and hibernate timeouts for AC and/or DC power modes using the powercfg command.
     It logs the actions and any errors to a log file in the TEMP directory.
 
 .PARAMETER AC
-    Switch to set the monitor timeout for AC power mode.
+    Switch to set the timeouts for AC power mode.
 
 .PARAMETER DC
-    Switch to set the monitor timeout for DC power mode.
+    Switch to set the timeouts for DC power mode.
 
 .PARAMETER Timeout
     The timeout value in minutes. Must be between 0 and 1440.
 
 .EXAMPLE
     Set-TimeOut -AC -Timeout 10
-    Sets the monitor timeout for AC power mode to 10 minutes.
+    Sets the timeouts for AC power mode to 10 minutes.
 
 .EXAMPLE
     Set-TimeOut -DC -Timeout 20
-    Sets the monitor timeout for DC power mode to 20 minutes.
+    Sets the timeouts for DC power mode to 20 minutes.
 
 .EXAMPLE
     Set-TimeOut -AC -DC -Timeout 15
-    Sets the monitor timeout for both AC and DC power modes to 15 minutes.
+    Sets the timeouts for both AC and DC power modes to 15 minutes.
 
 .NOTES
     Author: Hart Hoppe
@@ -61,27 +61,28 @@ function Set-TimeOut {
         Add-Content -Path $logFile -Value $entry
     }
 
-    if ($AC) {
-        try {
-            $command = "powercfg /change monitor-timeout-ac $Timeout"
-            Invoke-Expression $command
-            Write-Log "Success: Set monitor-timeout-ac to $Timeout minutes."
-        }
-        catch {
-            Write-Log "Error setting monitor-timeout-ac: $_"
-            Write-Error "Error setting monitor-timeout-ac: $_"
-        }
-    }
+    $timeouts = @(
+        "monitor-timeout-ac",
+        "monitor-timeout-dc",
+        "disk-timeout-ac",
+        "disk-timeout-dc",
+        "standby-timeout-ac",
+        "standby-timeout-dc",
+        "hibernate-timeout-ac",
+        "hibernate-timeout-dc"
+    )
 
-    if ($DC) {
-        try {
-            $command = "powercfg /change monitor-timeout-dc $Timeout"
-            Invoke-Expression $command
-            Write-Log "Success: Set monitor-timeout-dc to $Timeout minutes."
-        }
-        catch {
-            Write-Log "Error setting monitor-timeout-dc: $_"
-            Write-Error "Error setting monitor-timeout-dc: $_"
+    foreach ($timeout in $timeouts) {
+        if (($timeout -like "*-ac" -and $AC) -or ($timeout -like "*-dc" -and $DC)) {
+            try {
+                $command = "powercfg /change $timeout $Timeout"
+                Invoke-Expression $command
+                Write-Log "Success: Set $timeout to $Timeout minutes."
+            }
+            catch {
+                Write-Log "Error setting $timeout: $_"
+                Write-Error "Error setting $timeout: $_"
+            }
         }
     }
 }
